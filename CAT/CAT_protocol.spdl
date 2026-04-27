@@ -1,0 +1,196 @@
+usertype VehicleID;
+
+usertype PseudoID;
+
+usertype BSM;
+
+usertype Timestamp;
+
+usertype Nonce;
+
+usertype PKEphemeral;
+
+usertype SKEphemeral;
+
+usertype Cert;
+
+usertype KEMCiphertext;
+
+usertype KEMShared;
+
+
+
+secret skCAE;
+
+secret pkCAE;
+
+inversekeys(skCAE, pkCAE);
+
+
+
+secret skCAPQ;
+
+secret pkCAPQ;
+
+inversekeys(skCAPQ, pkCAPQ);
+
+
+
+secret skV;
+
+secret pkV;
+
+inversekeys(skV, pkV);
+
+
+
+hashfunction h;
+
+hashfunction hkdf;
+
+hashfunction aead;
+
+
+
+const AD1, AD2, AD3, keyconfirm;
+
+
+
+protocol CAT(CA, I, R)
+
+{
+
+    role CA
+
+    {
+
+        claim(CA, Secret, skCAE);
+
+        claim(CA, Secret, skCAPQ);
+
+    }
+
+
+
+    role I
+
+    {
+
+        fresh Psi: PseudoID;
+
+        fresh bsm: BSM;
+
+        fresh tsI: Timestamp;
+
+        fresh Ni: Nonce;
+
+
+
+        fresh ski, pki: PKEphemeral;
+
+        inversekeys(ski, pki);
+
+
+
+        fresh certIclassic: Cert;
+
+        fresh certIpq: Cert;
+
+
+
+        fresh kemct: KEMCiphertext;
+
+        fresh kemss: KEMShared;
+
+
+
+        send_1(I, R, {Psi, pki, certIclassic, certIpq, kemct}pkCAE,
+
+                    aead(hkdf(h(pki, Psi, Ni), kemss), AD1, Psi, bsm, tsI, Ni));
+
+
+
+        fresh Nr: Nonce;
+
+        recv_2(R, I, aead(hkdf(h(pki, Psi, Ni), kemss), AD2, Ni, Nr));
+
+
+
+        send_3(I, R, aead(hkdf(h(pki, Psi, Ni), kemss), AD3, Nr, keyconfirm));
+
+
+
+        claim(I, Alive);
+
+        claim(I, Secret, hkdf(h(pki, Psi, Ni), kemss));
+
+        claim(I, Nisynch);
+
+        claim(I, Niagree);
+
+        claim(I, Commit, R, hkdf(h(pki, Psi, Ni), kemss), Ni, Nr, h(bsm));
+
+    }
+
+
+
+    role R
+
+    {
+
+        var Psi: PseudoID;
+
+        var bsm: BSM;
+
+        var tsI: Timestamp;
+
+        var Ni: Nonce;
+
+        var pki: PKEphemeral;
+
+        var certIclassic: Cert;
+
+        var certIpq: Cert;
+
+        var kemct: KEMCiphertext;
+
+        var kemss: KEMShared;
+
+
+
+
+
+        fresh Nr: Nonce;
+
+
+
+        recv_1(I, R, {Psi, pki, certIclassic, certIpq, kemct}pkCAE,
+
+                    aead(hkdf(h(pki, Psi, Ni), kemss), AD1, Psi, bsm, tsI, Ni));
+
+
+
+        send_2(R, I, aead(hkdf(h(pki, Psi, Ni), kemss), AD2, Ni, Nr));
+
+
+
+        recv_3(I, R, aead(hkdf(h(pki, Psi, Ni), kemss), AD3, Nr, keyconfirm));
+
+
+
+        claim(R, Alive);
+
+        claim(R, Secret, hkdf(h(pki, Psi, Ni), kemss));
+
+        claim(R, Weakagree);
+
+        claim(R, Nisynch);
+
+        claim(R, Niagree);
+
+        claim(R, Commit, I, hkdf(h(pki, Psi, Ni), kemss), Psi, bsm, tsI, Ni, Nr);
+
+    }
+
+}
+
