@@ -1,0 +1,279 @@
+usertype VehicleID;
+
+usertype PseudoID;
+
+usertype BSM;
+
+usertype Timestamp;
+
+usertype Nonce;
+
+usertype PKEphemeral;
+
+usertype PKEphemeralPQ;
+
+usertype SKEphemeral;
+
+
+
+secret skCAE;
+
+secret pkCAE;
+
+inversekeys(skCAE, pkCAE);
+
+
+
+secret skCAPQ;
+
+secret pkCAPQ;
+
+inversekeys(skCAPQ, pkCAPQ);
+
+
+
+secret skV;
+
+secret pkV;
+
+inversekeys(skV, pkV);
+
+
+
+secret skVpq;
+
+secret pkVpq;
+
+inversekeys(skVpq, pkVpq);
+
+
+
+secret skiTEE;
+
+secret skrTEE;
+
+inversekeys(skiTEE, pkV);
+
+inversekeys(skrTEE, pkVpq);
+
+
+
+hashfunction h;
+
+hashfunction hkdf;
+
+hashfunction aead;
+
+function dh;
+
+function pqdh;
+
+function signPQ;
+
+const AD1, AD2, AD3, keyconfirm;
+
+
+protocol CLAT(CA, I, R)
+
+{
+
+    role CA {
+
+        claim(CA, Secret, skCAE);
+
+        claim(CA, Secret, skCAPQ);
+
+    }
+
+
+
+    role I {
+
+        fresh Psi: PseudoID;
+
+        fresh bsm: BSM;
+
+        fresh tsI: Timestamp;
+
+        fresh Ni: Nonce;
+
+
+
+        fresh ski, pki: PKEphemeral;
+
+        inversekeys(ski, pki);
+
+        fresh skiPQ, pkiPQ: PKEphemeralPQ;
+
+        inversekeys(skiPQ, pkiPQ);
+
+
+
+        send_1(I, R, Psi, pki, pkiPQ,
+
+               signPQ(skiTEE, pkiPQ, Ni), Ni, bsm, tsI);
+
+
+
+        var pkr: PKEphemeral;
+
+        var pkrPQ: PKEphemeralPQ;
+
+        fresh Nr: Nonce;
+
+
+
+        recv_2(R, I, pkr, pkrPQ, signPQ(skrTEE, pkrPQ, Ni, Nr),
+
+               aead(hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                           Psi, Ni, Nr,
+
+                           signPQ(skiTEE, pkiPQ, Ni),
+
+                           signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+                    AD2, Ni, Nr));
+
+
+
+        send_3(I, R,
+
+               aead(hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                           Psi, Ni, Nr,
+
+                           signPQ(skiTEE, pkiPQ, Ni),
+
+                           signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+                    AD3, Nr, keyconfirm));
+
+
+
+        claim(I, Alive);
+
+        claim(I, Secret, skiTEE);
+
+        claim(I, Secret, hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                                Psi, Ni, Nr,
+
+                                signPQ(skiTEE, pkiPQ, Ni),
+
+                                signPQ(skrTEE, pkrPQ, Ni, Nr))));
+
+        claim(I, Nisynch);
+
+        claim(I, Niagree);
+
+        claim(I, Commit, R,
+
+               hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                      Psi, Ni, Nr,
+
+                      signPQ(skiTEE, pkiPQ, Ni),
+
+                      signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+               Ni, Nr, h(bsm));
+
+    }
+
+
+
+    role R {
+
+        var Psi: PseudoID;
+
+        var bsm: BSM;
+
+        var tsI: Timestamp;
+
+        var Ni: Nonce;
+
+        var pki: PKEphemeral;
+
+        var pkiPQ: PKEphemeralPQ;
+
+
+
+        fresh skr, pkr: PKEphemeral;
+
+        inversekeys(skr, pkr);
+
+        fresh skrPQ, pkrPQ: PKEphemeralPQ;
+
+        inversekeys(skrPQ, pkrPQ);
+
+        fresh Nr: Nonce;
+
+
+
+        recv_1(I, R, Psi, pki, pkiPQ, signPQ(skiTEE, pkiPQ, Ni), Ni, bsm, tsI);
+
+
+
+        send_2(R, I, pkr, pkrPQ, signPQ(skrTEE, pkrPQ, Ni, Nr),
+
+               aead(hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                           Psi, Ni, Nr,
+
+                           signPQ(skiTEE, pkiPQ, Ni),
+
+                           signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+                    AD2, Ni, Nr));
+
+
+
+        recv_3(I, R,
+
+               aead(hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                           Psi, Ni, Nr,
+
+                           signPQ(skiTEE, pkiPQ, Ni),
+
+                           signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+                    AD3, Nr, keyconfirm));
+
+
+
+        claim(R, Alive);
+
+        claim(R, Secret, skrTEE);
+
+        claim(R, Secret, hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                                Psi, Ni, Nr,
+
+                                signPQ(skiTEE, pkiPQ, Ni),
+
+                                signPQ(skrTEE, pkrPQ, Ni, Nr))));
+
+        claim(R, Weakagree);
+
+        claim(R, Nisynch);
+
+        claim(R, Niagree);
+
+        claim(R, Commit, I,
+
+               hkdf(h(dh(pki, pkr), pqdh(pkiPQ, pkrPQ),
+
+                      Psi, Ni, Nr,
+
+                      signPQ(skiTEE, pkiPQ, Ni),
+
+                      signPQ(skrTEE, pkrPQ, Ni, Nr))),
+
+               Psi, bsm, tsI, Ni, Nr);
+
+    }
+
+}
+
