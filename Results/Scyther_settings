@@ -1,0 +1,33 @@
+Scyther Configuration for Formal Verification
+=============================================
+
+Tool: Scyther v1.1.3
+Verification Mode: Symbolic analysis (Dolev-Yao model)
+
+----------------------------------------
+Verification Parameters
+----------------------------------------
+
+Maximum number of runs: 5
+Matching type: typed matching
+
+----------------------------------------
+Advanced Parameters
+----------------------------------------
+
+Search pruning strategy: Find best attack
+Maximum patterns per claim: 10
+
+----------------------------------------
+Graph Output Parameters
+----------------------------------------
+
+Attack graph font size: 11
+
+----------------------------------------
+Remarks
+----------------------------------------
+
+These settings provide a balance between verification depth and computational efficiency.
+Typed matching ensures correct message typing, while bounded runs enable detection of replay,
+impersonation, and concurrency-based attacks within practical limits.
